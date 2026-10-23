@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+build/
+dist/
+*.egg-info/
+
+# Environment and Secrets (CRITICAL: NEVER COMMIT SECRETS)
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.token
+*.secret
+
+# Agent local locks and temp files
+.agent.lock
+*.tmp
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs (keep logs directory via .gitkeep, ignore log files)
+logs/*.log
+!logs/.gitkeep

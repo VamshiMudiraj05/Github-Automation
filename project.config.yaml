@@ -1,0 +1,59 @@
+# ==============================================================================
+# Autonomous 30-Day Project Builder Agent Configuration
+# ==============================================================================
+
+# Project Metadata
+project_name: "CloudTelemetry: High-Performance Distributed Metrics & Tracing Agent"
+project_description: "A production-grade, lightweight distributed telemetry ingestion and metrics aggregation engine with real-time alerting, timeseries persistence, and interactive dashboard."
+project_goals:
+  - "Build an asynchronous telemetry collector capable of ingesting high-volume metrics over HTTP/gRPC"
+  - "Implement sliding-window metrics aggregation, quantile calculation, and rate limiting"
+  - "Provide robust timeseries storage with pluggable persistence adapters (SQLite, in-memory, file)"
+  - "Implement dynamic anomaly detection and multi-channel alerting rules (webhook, email)"
+  - "Deliver comprehensive unit, integration, and performance benchmark test suites with 90%+ coverage"
+  - "Package with complete developer CLI, automated CI/CD pipeline, and rich interactive documentation"
+
+tech_stack:
+  language: "Python"
+  runtime: "Python 3.12+"
+  frameworks:
+    - "Click (CLI)"
+    - "PyYAML"
+    - "SQLite"
+    - "Pytest"
+  toolchain:
+    test_command: "python -m pytest tests/ -v --tb=short"
+    lint_command: "python -m compileall -q ."
+    build_command: ""
+
+# Repository and Git Automation
+repository_url: "https://github.com/vamsh/cloudtelemetry-agent"
+base_branch: "main"
+
+# Schedule Settings (IST = UTC+5:30 -> 18:00 IST is 12:30 UTC)
+timezone: "Asia/Kolkata"
+daily_run_time: "18:00"
+project_start_date: "2026-10-24"
+project_duration_days: 30
+
+# Automation Gates and Rules
+daily_commit_enabled: true
+daily_push_enabled: true
+run_tests_before_commit: true
+require_meaningful_changes: true
+max_retries: 3
+daily_execution_timeout_minutes: 25
+
+# Model Provider Settings (API keys read via ENV variables)
+llm:
+  provider: "gemini"               # Options: gemini | openai | anthropic | mock
+  model: "gemini-2.5-flash"        # Default model for chosen provider
+  temperature: 0.2
+  max_output_tokens: 4096
+
+# Notifications (Optional)
+notifications:
+  notification_email: ""
+  notification_webhook: ""
+  notify_on_success: true
+  notify_on_failure: true
