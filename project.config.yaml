@@ -1,25 +1,28 @@
 # ==============================================================================
 # Autonomous 30-Day Project Builder Agent Configuration
+# Project: ClarifySQL — Text-to-SQL with a Clarification Engine
 # ==============================================================================
 
 # Project Metadata
-project_name: "CloudTelemetry: High-Performance Distributed Metrics & Tracing Agent"
-project_description: "A production-grade, lightweight distributed telemetry ingestion and metrics aggregation engine with real-time alerting, timeseries persistence, and interactive dashboard."
+project_name: "ClarifySQL: Text-to-SQL with a Clarification Engine"
+project_description: "A production-minded, portfolio-quality application that converts natural-language questions into accurate SQL queries, detects ambiguity, asks users targeted clarification questions, validates generated SQL, executes safe read-only queries, and presents results in an interactive interface."
 project_goals:
-  - "Build an asynchronous telemetry collector capable of ingesting high-volume metrics over HTTP/gRPC"
-  - "Implement sliding-window metrics aggregation, quantile calculation, and rate limiting"
-  - "Provide robust timeseries storage with pluggable persistence adapters (SQLite, in-memory, file)"
-  - "Implement dynamic anomaly detection and multi-channel alerting rules (webhook, email)"
-  - "Deliver comprehensive unit, integration, and performance benchmark test suites with 90%+ coverage"
-  - "Package with complete developer CLI, automated CI/CD pipeline, and rich interactive documentation"
+  - "Build an intelligent ambiguity-detection engine that asks concise, targeted clarification questions only when necessary"
+  - "Implement schema-aware, hallucination-free SQL generation with full dialect and relationship support"
+  - "Enforce multi-layered SQL security: AST parsing, read-only restriction (SELECT/CTEs only), timeout enforcement, and parameterized limits"
+  - "Provide stateful multi-turn conversation memory preserving questions, clarification options, and user choices"
+  - "Deliver high-performance FastAPI backend with synthetic PostgreSQL/SQLite domain data (customers, orders, products)"
+  - "Build interactive React + Tailwind CSS web dashboard displaying chat history, SQL previews, data tables, and AI explanations"
 
 tech_stack:
-  language: "Python"
-  runtime: "Python 3.12+"
+  language: "Python & TypeScript"
+  runtime: "Python 3.12+ / Node.js 20+"
   frameworks:
-    - "Click (CLI)"
-    - "PyYAML"
-    - "SQLite"
+    - "FastAPI"
+    - "Pydantic v2"
+    - "SQLAlchemy / SQLite / PostgreSQL"
+    - "React"
+    - "Tailwind CSS"
     - "Pytest"
   toolchain:
     test_command: "python -m pytest tests/ -v --tb=short"
