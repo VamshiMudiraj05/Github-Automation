@@ -23,6 +23,8 @@ dist/
 # Agent local locks and temp files
 .agent.lock
 *.tmp
+state/*.db-shm
+state/*.db-wal
 
 # IDE
 .vscode/
