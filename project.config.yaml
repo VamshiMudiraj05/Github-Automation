@@ -47,7 +47,7 @@ daily_execution_timeout_minutes: 25
 # Model Provider Settings (API keys read via ENV variables)
 llm:
   provider: "gemini"               # Options: gemini | openai | anthropic | mock
-  model: "gemini-2.5-flash"        # Default model for chosen provider
+  model: "gemini-3.5-flash"        # Recommended Google Gemini model
   temperature: 0.2
   max_output_tokens: 4096
 

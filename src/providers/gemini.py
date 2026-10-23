@@ -16,7 +16,7 @@ class GeminiProvider(LLMProvider):
 
     BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 
-    def __init__(self, api_key: Optional[str], model: str = "gemini-2.5-flash", timeout: int = 60):
+    def __init__(self, api_key: Optional[str], model: str = "gemini-3.5-flash", timeout: int = 60):
         self.api_key = api_key
         self.model = model
         self.timeout = timeout
