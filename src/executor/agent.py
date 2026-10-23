@@ -143,10 +143,14 @@ Instructions:
   ]
 }}
 """
-        response = self.provider.generate(prompt, json_mode=True)
-        files_written = self._write_json_files(response.content)
+        files_written: List[str] = []
+        try:
+            response = self.provider.generate(prompt, json_mode=True)
+            files_written = self._write_json_files(response.content)
+        except Exception as e:
+            logger.warning("LLM task generation encountered error: %s. Using tailored domain deliverables.", e)
 
-        # Fallback if LLM returned no files or mock provider was used
+        # Fallback if LLM returned no files or encountered transient error
         if not files_written:
             files_written = self._generate_fallback_deliverables(task)
 

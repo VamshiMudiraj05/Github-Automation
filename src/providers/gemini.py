@@ -75,10 +75,15 @@ class GeminiProvider(LLMProvider):
                         completion_tokens=usage.get("candidatesTokenCount", 0),
                         raw_response=data,
                     )
-                elif response.status_code in (429, 503) and attempt < max_attempts:
-                    logger.warning("Gemini rate limited (%d). Retrying in %d seconds...", response.status_code, backoff)
-                    time.sleep(backoff)
-                    backoff *= 2
+                elif response.status_code in (429, 503):
+                    # If high demand, fallback to gemini-3.5-flash-lite or retry
+                    if "lite" not in self.model and attempt >= 2:
+                        logger.warning("Gemini model %s busy (%d). Falling back to gemini-3.5-flash-lite...", self.model, response.status_code)
+                        url = f"{self.BASE_URL}/gemini-3.5-flash-lite:generateContent?key={self.api_key}"
+                    else:
+                        logger.warning("Gemini rate limited (%d). Retrying in %d seconds...", response.status_code, backoff)
+                        time.sleep(backoff)
+                        backoff *= 2
                 else:
                     error_text = response.text
                     raise RuntimeError(f"Gemini API error ({response.status_code}): {error_text}")
