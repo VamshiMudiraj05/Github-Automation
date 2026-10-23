@@ -22,7 +22,7 @@ class RoadmapGenerator:
         self.config = config
         self.state_manager = state_manager
         self.provider = provider or get_llm_provider(config.llm)
-        self.writer = RoadmapWriter(config.workspace_root, config)
+        self.writer = RoadmapWriter(config.target_project_root, config)
 
     def generate_and_save(self, force: bool = False) -> List[Task]:
         """Generate roadmap tasks if not already existing, and persist to SQLite and ROADMAP.md."""

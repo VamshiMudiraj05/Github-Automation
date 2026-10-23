@@ -59,13 +59,29 @@ class GitClient:
         code, out, _ = self._run_git(["rev-parse", "--is-inside-work-tree"], check=False)
         return code == 0 and "true" in out.lower()
 
-    def init_repo_if_needed(self) -> bool:
-        """Initialize repository if not already a git worktree."""
+    def clone_or_init_repo(self) -> bool:
+        """Ensure the target repository is checked out and tracking remote."""
         if not self.is_git_repo():
-            logger.info("Initializing new git repository at %s", self.workspace_root)
+            self.workspace_root.mkdir(parents=True, exist_ok=True)
+            auth_url = self.get_authenticated_remote_url()
+            if self.repository_url:
+                logger.info("Attempting to clone target repo %s into %s...", self.repository_url, self.workspace_root)
+                code, _, _ = self._run_git(["clone", auth_url, "."], check=False, timeout=60)
+                if code == 0:
+                    logger.info("Target repository cloned successfully.")
+                    return True
+
+            logger.info("Initializing new local git repository at %s", self.workspace_root)
             self._run_git(["init", "-b", self.base_branch])
+            self.setup_remote()
             return True
-        return False
+        else:
+            self.setup_remote()
+            self.fetch_remote()
+            return True
+
+    def init_repo_if_needed(self) -> bool:
+        return self.clone_or_init_repo()
 
     def get_status(self) -> GitStatus:
         if not self.is_git_repo():
@@ -134,9 +150,9 @@ class GitClient:
         return sha.strip()
 
     def get_authenticated_remote_url(self) -> str:
-        """Resolve remote URL with token if GITHUB_TOKEN is present in env."""
+        """Resolve remote URL with token if GH_PAT or GITHUB_TOKEN is present in env."""
         url = self.repository_url
-        token = os.getenv("GITHUB_TOKEN")
+        token = os.getenv("GH_PAT") or os.getenv("GITHUB_TOKEN")
         if token and url.startswith("https://github.com/"):
             # Insert token for auth
             return url.replace("https://github.com/", f"https://x-access-token:{token}@github.com/")

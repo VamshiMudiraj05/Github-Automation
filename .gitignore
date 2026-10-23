@@ -23,6 +23,7 @@ dist/
 # Agent local locks and temp files
 .agent.lock
 *.tmp
+workspace/
 state/*.db-shm
 state/*.db-wal
 

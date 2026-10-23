@@ -72,12 +72,32 @@ class ProjectConfig:
     max_retries: int = 3
     daily_execution_timeout_minutes: int = 25
 
+    # Target workspace isolation (allows agent to push to external Repo B without polluting itself)
+    target_workspace: Optional[str] = None
+
     # Sub-configs
     llm: LLMConfig = field(default_factory=LLMConfig)
     notifications: NotificationConfig = field(default_factory=NotificationConfig)
 
     # Runtime computed
     workspace_root: Path = field(default_factory=Path.cwd)
+
+    @property
+    def target_project_root(self) -> Path:
+        """Returns the directory where the target software project lives."""
+        if self.target_workspace:
+            path = (self.workspace_root / self.target_workspace).resolve()
+            path.mkdir(parents=True, exist_ok=True)
+            return path
+        return self.workspace_root
+
+    @property
+    def project_id(self) -> str:
+        """Derive a safe identifier from repository_url or project_name for multi-project isolation."""
+        if self.repository_url:
+            clean = self.repository_url.rstrip("/").split("/")[-1].replace(".git", "")
+            return re.sub(r"[^a-zA-Z0-9_\-]", "_", clean)
+        return re.sub(r"[^a-zA-Z0-9_\-]", "_", self.project_name.lower())
 
     def get_cron_schedule_utc(self) -> str:
         """Convert daily_run_time from configured timezone (default Asia/Kolkata UTC+5:30) to UTC cron expression.
@@ -207,6 +227,7 @@ def load_config(config_path: Optional[Path] = None) -> ProjectConfig:
         require_meaningful_changes=bool(raw.get("require_meaningful_changes", True)),
         max_retries=int(raw.get("max_retries", 3)),
         daily_execution_timeout_minutes=int(raw.get("daily_execution_timeout_minutes", 25)),
+        target_workspace=raw.get("target_workspace"),
         llm=llm,
         notifications=notif,
         workspace_root=path.parent,

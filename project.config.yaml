@@ -26,9 +26,10 @@ tech_stack:
     lint_command: "python -m compileall -q ."
     build_command: ""
 
-# Repository and Git Automation
-repository_url: "https://github.com/VamshiMudiraj05/Github-Automation"
+# Repository and Git Automation (Target Project: Repo B)
+repository_url: "https://github.com/VamshiMudiraj05/Text-to-SQL"
 base_branch: "main"
+target_workspace: "workspace/Text-to-SQL"
 
 # Schedule Settings (IST = UTC+5:30 -> 18:00 IST is 12:30 UTC)
 timezone: "Asia/Kolkata"

@@ -9,6 +9,7 @@ from typing import List, Optional
 
 from src.config import ProjectConfig, load_config
 from src.executor.agent import CodingAgent, ExecutionResult
+from src.executor.tools import WorkspaceTools
 from src.git.client import GitClient
 from src.notifications.notifier import NotificationService
 from src.planner.generator import RoadmapGenerator
@@ -17,6 +18,7 @@ from src.providers.factory import get_llm_provider
 from src.reporting.report_generator import ReportGenerator
 from src.scheduler.lock import ExecutionLock, LockAcquisitionError
 from src.state.manager import ExecutionRun, StateManager, Task, TaskStatus
+from src.testing.quality_gate import QualityGate
 
 logger = logging.getLogger("agent.scheduler.runner")
 
@@ -27,12 +29,17 @@ class DailyExecutionRunner:
     def __init__(self, config: Optional[ProjectConfig] = None):
         self.config = config or load_config()
         self.workspace_root = self.config.workspace_root
-        self.state_manager = StateManager(self.workspace_root / "state" / "agent_state.db")
+        self.target_root = self.config.target_project_root
+
+        state_dir = self.workspace_root / "state"
+        state_dir.mkdir(parents=True, exist_ok=True)
+        self.state_manager = StateManager(state_dir / f"{self.config.project_id}_state.db")
+
         self.lock = ExecutionLock(self.workspace_root, stale_timeout_seconds=self.config.daily_execution_timeout_minutes * 60)
-        self.git = GitClient(self.workspace_root, self.config.repository_url, self.config.base_branch)
+        self.git = GitClient(self.target_root, self.config.repository_url, self.config.base_branch)
         self.notifier = NotificationService(self.config.notifications, self.config.project_name)
         self.reporter = ReportGenerator(self.workspace_root, self.config)
-        self.writer = RoadmapWriter(self.workspace_root, self.config)
+        self.writer = RoadmapWriter(self.target_root, self.config)
         self.provider = get_llm_provider(self.config.llm)
 
     def run_daily_cycle(self, target_day: Optional[int] = None, dry_run: bool = False, force: bool = False) -> ExecutionRun:
@@ -98,12 +105,12 @@ class DailyExecutionRunner:
             self.state_manager.mark_task_in_progress(task.day_number)
 
             # Step 5: Verify Git environment
-            self.git.init_repo_if_needed()
-            if self.config.daily_push_enabled and self.config.repository_url:
-                self.git.fetch_remote()
+            self.git.clone_or_init_repo()
 
-            # Step 6: Execute task via CodingAgent
-            agent = CodingAgent(self.config, provider=self.provider)
+            # Step 6: Execute task via CodingAgent inside target_root
+            tools = WorkspaceTools(self.target_root)
+            quality_gate = QualityGate(self.target_root, self.config.tech_stack.toolchain)
+            agent = CodingAgent(self.config, provider=self.provider, tools=tools, quality_gate=quality_gate)
             exec_result = agent.execute_task(task)
 
             # Step 7: Check quality gate results
@@ -125,10 +132,10 @@ class DailyExecutionRunner:
                 self.writer.write_roadmap_md(all_tasks)
                 self.writer.write_progress_md(all_tasks, self.state_manager.get_progress_summary())
 
-                # Stage changed files + updated docs
+                # Stage changed files + updated docs in target_root
                 stage_targets = list(exec_result.changed_files)
                 for doc in ["ROADMAP.md", "PROGRESS.md"]:
-                    if (self.workspace_root / doc).exists():
+                    if (self.target_root / doc).exists():
                         stage_targets.append(doc)
 
                 # Step 9: Commit changes

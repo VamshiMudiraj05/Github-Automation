@@ -28,10 +28,10 @@ def test_roadmap_generates_30_tasks(tmp_path: Path):
     assert "Phase 5: Release" in phases
 
     # Validate generated files
-    assert (tmp_path / "ROADMAP.md").exists()
-    assert (tmp_path / "PROGRESS.md").exists()
+    assert (config.target_project_root / "ROADMAP.md").exists()
+    assert (config.target_project_root / "PROGRESS.md").exists()
 
-    roadmap_text = (tmp_path / "ROADMAP.md").read_text(encoding="utf-8")
+    roadmap_text = (config.target_project_root / "ROADMAP.md").read_text(encoding="utf-8")
     assert "30-Day Engineering Roadmap" in roadmap_text
     assert "Day 01" in roadmap_text
     assert "Day 30" in roadmap_text
