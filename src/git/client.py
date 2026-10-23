@@ -56,28 +56,51 @@ class GitClient:
         return re.sub(r"https://[^@\s]+@", "https://***@", text)
 
     def is_git_repo(self) -> bool:
-        code, out, _ = self._run_git(["rev-parse", "--is-inside-work-tree"], check=False)
-        return code == 0 and "true" in out.lower()
+        """Check if workspace_root is itself a git repository (not merely inside a parent repository)."""
+        git_dir = self.workspace_root / ".git"
+        if git_dir.exists():
+            return True
+        code, out, _ = self._run_git(["rev-parse", "--show-toplevel"], check=False)
+        if code == 0 and out.strip():
+            try:
+                top_level = Path(out.strip()).resolve()
+                return top_level == self.workspace_root.resolve()
+            except Exception:
+                return False
+        return False
 
     def clone_or_init_repo(self) -> bool:
         """Ensure the target repository is checked out and tracking remote."""
+        self.workspace_root.mkdir(parents=True, exist_ok=True)
+        auth_url = self.get_authenticated_remote_url()
+
         if not self.is_git_repo():
-            self.workspace_root.mkdir(parents=True, exist_ok=True)
-            auth_url = self.get_authenticated_remote_url()
-            if self.repository_url:
+            # If target dir is completely empty, attempt git clone first
+            is_empty = not any(self.workspace_root.iterdir())
+            if self.repository_url and is_empty:
                 logger.info("Attempting to clone target repo %s into %s...", self.repository_url, self.workspace_root)
-                code, _, _ = self._run_git(["clone", auth_url, "."], check=False, timeout=60)
+                code, _, stderr = self._run_git(["clone", auth_url, "."], check=False, timeout=60)
                 if code == 0:
                     logger.info("Target repository cloned successfully.")
+                    self.setup_remote()
                     return True
+                else:
+                    logger.warning("Clone failed (%s), will initialize local repository instead.", stderr)
 
             logger.info("Initializing new local git repository at %s", self.workspace_root)
-            self._run_git(["init", "-b", self.base_branch])
+            self._run_git(["init"])
+            self._run_git(["checkout", "-B", self.base_branch], check=False)
             self.setup_remote()
+            if self.repository_url:
+                self.fetch_remote()
+                # Attempt to pull remote branch if it already exists
+                self._run_git(["pull", "origin", self.base_branch, "--allow-unrelated-histories"], check=False)
             return True
         else:
             self.setup_remote()
             self.fetch_remote()
+            self._run_git(["checkout", self.base_branch], check=False)
+            self._run_git(["pull", "origin", self.base_branch], check=False)
             return True
 
     def init_repo_if_needed(self) -> bool:
@@ -130,7 +153,20 @@ class GitClient:
             return
         # Ensure path format works across platforms
         cleaned = [p.replace("\\", "/") for p in file_paths]
-        self._run_git(["add"] + cleaned)
+        # Automatically create target .gitignore if none exists
+        target_gitignore = self.workspace_root / ".gitignore"
+        if not target_gitignore.exists():
+            default_ignore = (
+                "__pycache__/\n*.py[cod]\n*$py.class\n.pytest_cache/\n"
+                ".coverage\nhtmlcov/\n*.tmp\n.env\n.env.*\n*.db-shm\n*.db-wal\n"
+            )
+            target_gitignore.write_text(default_ignore, encoding="utf-8")
+            cleaned.append(".gitignore")
+
+        # Stage existing files
+        existing = [p for p in cleaned if (self.workspace_root / p).exists()]
+        if existing:
+            self._run_git(["add"] + existing)
 
     def commit(self, message: str) -> str:
         """Create a commit with the specified message and return its SHA."""

@@ -41,3 +41,25 @@ def test_git_init_and_status(tmp_path: Path):
 
     status_after = git.get_status()
     assert status_after.is_clean is True
+
+
+def test_nested_workspace_subproject_isolation(tmp_path: Path):
+    """Ensure child directories inside a git repo are not falsely reported as git repos."""
+    # Parent repo
+    parent_git = GitClient(tmp_path, base_branch="main")
+    parent_git.init_repo_if_needed()
+    assert parent_git.is_git_repo() is True
+
+    # Nested target subproject directory
+    subproject = tmp_path / "workspace" / "subproject"
+    subproject.mkdir(parents=True, exist_ok=True)
+    child_git = GitClient(subproject, base_branch="main")
+
+    # Should NOT be a git repo initially, even though parent is
+    assert child_git.is_git_repo() is False
+
+    # After initializing, it becomes its own independent git repo
+    child_git.init_repo_if_needed()
+    assert child_git.is_git_repo() is True
+    assert (subproject / ".git").exists()
+

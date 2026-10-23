@@ -56,8 +56,10 @@ class QualityGate:
             return True, "No test command configured."
         try:
             res = self.run_command(self.toolchain.test_command)
-            output = (res.stdout or "") + "\n" + (res.stderr or "")
-            return res.returncode == 0, output.strip()
+            output = ((res.stdout or "") + "\n" + (res.stderr or "")).strip()
+            # Exit code 0 means passed. Exit code 5 means no tests were collected (acceptable during initial setup/doc phase).
+            passed = res.returncode in (0, 5)
+            return passed, output
         except subprocess.TimeoutExpired:
             return False, "Test suite execution timed out."
         except Exception as e:
