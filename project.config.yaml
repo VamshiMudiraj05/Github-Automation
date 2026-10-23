@@ -27,7 +27,7 @@ tech_stack:
     build_command: ""
 
 # Repository and Git Automation
-repository_url: "https://github.com/vamsh/cloudtelemetry-agent"
+repository_url: "https://github.com/VamshiMudiraj05/Github-Automation"
 base_branch: "main"
 
 # Schedule Settings (IST = UTC+5:30 -> 18:00 IST is 12:30 UTC)
