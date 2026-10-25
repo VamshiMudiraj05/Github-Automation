@@ -32,6 +32,16 @@ def test_e2e_daily_run_cycle(tmp_path: Path):
     assert run1.commit_sha is not None
     assert Path(run1.report_path).exists()
 
+    # Verify multiple granular commits were created (dark green activity)
+    rev_count = subprocess.run(
+        ["git", "rev-list", "--count", "HEAD"],
+        cwd=str(runner.target_root),
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert int(rev_count.stdout.strip()) >= 3
+
     # Verify task 1 is marked COMPLETED in state store
     t1 = runner.state_manager.get_task_by_day(1)
     assert t1.status == TaskStatus.COMPLETED

@@ -16,7 +16,7 @@ class GeminiProvider(LLMProvider):
 
     BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 
-    def __init__(self, api_key: Optional[str], model: str = "gemini-3.5-flash", timeout: int = 60):
+    def __init__(self, api_key: Optional[str], model: str = "gemini-2.5-flash", timeout: int = 60):
         self.api_key = api_key
         self.model = model
         self.timeout = timeout
@@ -31,7 +31,9 @@ class GeminiProvider(LLMProvider):
         if not self.api_key:
             raise ValueError("GEMINI_API_KEY environment variable is not configured.")
 
-        url = f"{self.BASE_URL}/{self.model}:generateContent?key={self.api_key}"
+        # Fallback chain for high availability
+        active_model = self.model
+        url = f"{self.BASE_URL}/{active_model}:generateContent?key={self.api_key}"
         
         contents = [{"role": "user", "parts": [{"text": prompt}]}]
         
@@ -55,9 +57,9 @@ class GeminiProvider(LLMProvider):
 
         headers = {"Content-Type": "application/json"}
 
-        # Retry loop for transient network or 429 rate limit issues
-        max_attempts = 4
-        backoff = 2
+        # Retry loop for transient network, 429 rate limit, or 503 high-demand issues
+        max_attempts = 5
+        backoff = 2.0
         for attempt in range(1, max_attempts + 1):
             try:
                 response = requests.post(url, headers=headers, json=payload, timeout=self.timeout)
@@ -76,14 +78,20 @@ class GeminiProvider(LLMProvider):
                         raw_response=data,
                     )
                 elif response.status_code in (429, 503):
-                    # If high demand, fallback to gemini-3.5-flash-lite or retry
-                    if "lite" not in self.model and attempt >= 2:
-                        logger.warning("Gemini model %s busy (%d). Falling back to gemini-3.5-flash-lite...", self.model, response.status_code)
-                        url = f"{self.BASE_URL}/gemini-3.5-flash-lite:generateContent?key={self.api_key}"
+                    # Tiered fallback progression: primary -> flash-lite -> gemini-1.5-flash
+                    if attempt == 2 and "lite" not in active_model:
+                        active_model = "gemini-2.5-flash-lite"
+                        logger.warning("Gemini model busy (%d). Falling back to %s...", response.status_code, active_model)
+                        url = f"{self.BASE_URL}/{active_model}:generateContent?key={self.api_key}"
+                    elif attempt >= 3:
+                        active_model = "gemini-1.5-flash"
+                        logger.warning("Gemini model busy (%d). Falling back to %s...", response.status_code, active_model)
+                        url = f"{self.BASE_URL}/{active_model}:generateContent?key={self.api_key}"
                     else:
-                        logger.warning("Gemini rate limited (%d). Retrying in %d seconds...", response.status_code, backoff)
-                        time.sleep(backoff)
-                        backoff *= 2
+                        logger.warning("Gemini rate limited (%d). Retrying in %.1f seconds...", response.status_code, backoff)
+
+                    time.sleep(backoff)
+                    backoff = min(backoff * 1.8, 16.0)
                 else:
                     error_text = response.text
                     raise RuntimeError(f"Gemini API error ({response.status_code}): {error_text}")
@@ -91,7 +99,7 @@ class GeminiProvider(LLMProvider):
                 if attempt == max_attempts:
                     raise RuntimeError(f"Gemini connection failed after {max_attempts} attempts: {e}")
                 time.sleep(backoff)
-                backoff *= 2
+                backoff = min(backoff * 1.8, 16.0)
 
         raise RuntimeError("Gemini API call failed unexpectedly.")
 

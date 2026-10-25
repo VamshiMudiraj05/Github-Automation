@@ -85,6 +85,11 @@ class CodingAgent:
                 break
             
             logger.warning("Quality check failed on attempt %d: %s", attempt, report.summary)
+            if report.test_output and not report.tests_passed:
+                logger.warning("--- Pytest Failure Output (Attempt %d) ---\n%s", attempt, report.test_output[-2500:])
+            if report.lint_output and not report.lint_passed:
+                logger.warning("--- Lint Failure Output (Attempt %d) ---\n%s", attempt, report.lint_output[-1500:])
+
             if attempt < max_attempts:
                 # Attempt targeted auto-repair
                 logger.info("Initiating auto-repair for Day %d...", task.day_number)

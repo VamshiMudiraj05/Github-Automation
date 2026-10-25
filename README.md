@@ -1,12 +1,12 @@
 # 🤖 Autonomous 30-Day Project Builder Agent
 
-> **An enterprise-grade, fully autonomous engineering agent that independently plans, implements, tests, documents, and pushes real software progress to GitHub every day at 6:00 PM IST (12:30 UTC) for 30 consecutive days — even when your computer is shut down or your IDE is closed.**
+> **An enterprise-grade, fully autonomous engineering agent that independently plans, implements, tests, documents, and pushes real software progress to GitHub every day at 12:00 AM IST (18:30 UTC) for 30 consecutive days — even when your computer is shut down or your IDE is closed.**
 
 ---
 
 ## 🌟 Overview & Key Capabilities
 
-- **Zero Manual Daily Intervention:** Executes in the cloud via GitHub Actions scheduled workflows (`cron: '30 12 * * *'`), requiring zero human involvement after one-time setup.
+- **Zero Manual Daily Intervention:** Executes in the cloud via GitHub Actions scheduled workflows (`cron: '30 18 * * *'`), requiring zero human involvement after one-time setup.
 - **Genuine GitHub Contribution Streak:** Commits and pushes verified, tested code modifications every single day with semantic conventional commits.
 - **Project-Specific 30-Day Roadmap:** Automatically generates a comprehensive 30-day technical plan divided into 5 development phases and persists it in SQLite and Markdown.
 - **Multi-Model LLM Portability:** Pluggable provider architecture supporting **Google Gemini (gemini-2.5-flash)**, **OpenAI (gpt-4o-mini)**, **Anthropic (Claude 3.5 Sonnet)**, and an offline **Deterministic Mock Provider**.
@@ -57,8 +57,8 @@ flowchart TD
 
 > [!NOTE]
 > GitHub Actions uses **UTC** for cron expressions. India Standard Time (IST) is **UTC+05:30**.
-> - **6:00 PM IST (18:00)** = **12:30 PM UTC (12:30)**.
-> - The cron schedule is configured as `30 12 * * *`.
+> - **12:00 AM IST (00:00 midnight)** = **6:30 PM UTC (18:30)**.
+> - The cron schedule is configured as `30 18 * * *`.
 > - GitHub Actions cron jobs may occasionally queue during high load, but will execute reliably every day.
 
 ---

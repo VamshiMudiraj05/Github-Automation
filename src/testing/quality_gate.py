@@ -1,6 +1,7 @@
 """Quality Gate executing automated tests, linter, builds, and diff sanity checks."""
 
 import logging
+import os
 import shlex
 import subprocess
 import time
@@ -41,11 +42,15 @@ class QualityGate:
     def run_command(self, cmd: str, timeout: int = 180) -> subprocess.CompletedProcess:
         """Safely execute a shell command inside workspace root."""
         logger.info("Executing quality command: %s", cmd)
-        # Use shell on Windows for path resolution, or split on POSIX
+        env = os.environ.copy()
+        ws_str = str(self.workspace_root)
+        current_pythonpath = env.get("PYTHONPATH", "")
+        env["PYTHONPATH"] = f"{ws_str}{os.pathsep}{current_pythonpath}" if current_pythonpath else ws_str
         return subprocess.run(
             cmd,
             shell=True,
-            cwd=str(self.workspace_root),
+            cwd=ws_str,
+            env=env,
             capture_output=True,
             text=True,
             timeout=timeout,

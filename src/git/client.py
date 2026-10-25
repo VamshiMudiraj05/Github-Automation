@@ -168,6 +168,11 @@ class GitClient:
         if existing:
             self._run_git(["add"] + existing)
 
+    def has_staged_changes(self) -> bool:
+        """Check if there are any staged changes ready to be committed."""
+        code, _, _ = self._run_git(["diff", "--cached", "--quiet"], check=False)
+        return code != 0
+
     def commit(self, message: str) -> str:
         """Create a commit with the specified message and return its SHA."""
         if not message.strip():

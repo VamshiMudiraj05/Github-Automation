@@ -5,7 +5,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from src.config import ProjectConfig, load_config
 from src.executor.agent import CodingAgent, ExecutionResult
@@ -126,39 +126,18 @@ class DailyExecutionRunner:
                 self.state_manager.mark_task_failed(task.day_number, error_msg)
                 status = "FAILED"
             else:
-                # Step 8: Update tracking docs so they get committed alongside the code
                 self.state_manager.mark_task_completed(task.day_number)
                 all_tasks = self.state_manager.get_all_tasks()
-                self.writer.write_roadmap_md(all_tasks)
-                self.writer.write_progress_md(all_tasks, self.state_manager.get_progress_summary())
 
-                # Stage changed files + updated docs in target_root
-                stage_targets = list(exec_result.changed_files)
-                for doc in ["ROADMAP.md", "PROGRESS.md"]:
-                    if (self.target_root / doc).exists():
-                        stage_targets.append(doc)
-
-                # Step 9: Commit changes
-                if self.config.daily_commit_enabled and not dry_run:
-                    commit_type = "feat" if task.day_number <= 19 else ("test" if task.day_number <= 25 else "release")
-                    commit_message = f"{commit_type}: [Day {task.day_number:02d}] {task.title}"
-                    
-                    self.git.stage_files(stage_targets)
-                    commit_sha = self.git.commit(commit_message)
-                    logger.info("Created Git commit: %s (%s)", commit_sha[:8], commit_message)
-
-                    # Update changelog with commit SHA
-                    self.writer.update_changelog(task.day_number, task.title, commit_sha, task.description)
+                # Step 8-10: Granular multi-commit & multi-push strategy (3-5 commits per day for dark green graph)
+                commit_sha, push_verified, all_shas = self._commit_and_push_milestone(
+                    task=task,
+                    all_tasks=all_tasks,
+                    changed_files=exec_result.changed_files,
+                    dry_run=dry_run,
+                )
+                if commit_sha:
                     self.state_manager.mark_task_completed(task.day_number, commit_sha)
-
-                    # Step 10: Push to remote
-                    if self.config.daily_push_enabled and self.config.repository_url:
-                        push_ok = self.git.push()
-                        if push_ok:
-                            push_verified = self.git.verify_remote_commit(commit_sha)
-                            logger.info("Remote push verification result: %s", push_verified)
-                        else:
-                            logger.warning("Remote push could not be completed.")
 
                 status = "SUCCESS"
 
@@ -201,3 +180,106 @@ class DailyExecutionRunner:
 
         finally:
             self.lock.release()
+
+    def _commit_and_push_milestone(
+        self,
+        task: Task,
+        all_tasks: List[Task],
+        changed_files: List[str],
+        dry_run: bool,
+    ) -> Tuple[Optional[str], bool, List[str]]:
+        """Commit daily changes in 3-5 granular stages and push to remote for dark-green GitHub activity."""
+        if not self.config.daily_commit_enabled or dry_run:
+            return None, False, []
+
+        commit_shas: List[str] = []
+
+        # Partition files into logical functional tiers
+        code_files = [
+            f for f in changed_files
+            if not f.startswith("tests/") and not f.startswith("docs/") and not f.endswith(".md")
+        ]
+        test_files = [
+            f for f in changed_files
+            if f.startswith("tests/") or "test_" in f
+        ]
+        doc_files = [
+            f for f in changed_files
+            if f.startswith("docs/") or (f.endswith(".md") and f not in ("ROADMAP.md", "PROGRESS.md", "CHANGELOG.md"))
+        ]
+        other_files = [
+            f for f in changed_files
+            if f not in code_files and f not in test_files and f not in doc_files
+        ]
+
+        def _do_commit(msg: str, files_to_stage: List[str]) -> Optional[str]:
+            if files_to_stage:
+                self.git.stage_files(files_to_stage)
+            if self.git.has_staged_changes():
+                sha = self.git.commit(msg)
+                logger.info("Created granular commit [%d/5]: %s (%s)", len(commit_shas) + 1, sha[:8], msg)
+                commit_shas.append(sha)
+                if self.config.daily_push_enabled and self.config.repository_url:
+                    self.git.push()
+                return sha
+            return None
+
+        commit_prefix = "feat" if task.day_number <= 19 else ("test" if task.day_number <= 25 else "release")
+
+        # 1. Implementation files (split into 2 commits if multiple exist)
+        if len(code_files) > 1:
+            mid = max(1, len(code_files) // 2)
+            _do_commit(f"{commit_prefix}(core): [Day {task.day_number:02d}] implement {task.title} components", code_files[:mid])
+            _do_commit(f"{commit_prefix}(service): [Day {task.day_number:02d}] add domain logic and utilities for {task.title}", code_files[mid:])
+        elif code_files:
+            _do_commit(f"{commit_prefix}(core): [Day {task.day_number:02d}] implement {task.title}", code_files)
+        elif doc_files and len(doc_files) > 1:
+            mid = max(1, len(doc_files) // 2)
+            _do_commit(f"docs(spec): [Day {task.day_number:02d}] define specifications for {task.title}", doc_files[:mid])
+            _do_commit(f"docs(spec): [Day {task.day_number:02d}] document contracts for {task.title}", doc_files[mid:])
+        elif other_files:
+            _do_commit(f"{commit_prefix}(scaffold): [Day {task.day_number:02d}] scaffold assets for {task.title}", other_files)
+
+        # 2. Test suite & verification specs
+        if test_files:
+            _do_commit(f"test(unit): [Day {task.day_number:02d}] add automated unit tests and assertions for {task.title}", test_files)
+        elif not code_files and doc_files and not self.git.has_staged_changes() and len(commit_shas) < 2:
+            _do_commit(f"docs(arch): [Day {task.day_number:02d}] add architecture specifications for {task.title}", doc_files)
+
+        # 3. Milestone Documentation & Roadmap
+        self.writer.write_roadmap_md(all_tasks)
+        roadmap_targets = ["ROADMAP.md"]
+        if doc_files:
+            roadmap_targets.extend(doc_files)
+        _do_commit(f"docs(roadmap): [Day {task.day_number:02d}] update 30-day technical roadmap", roadmap_targets)
+
+        # 4. Changelog release notes
+        last_sha = commit_shas[-1] if commit_shas else "milestone"
+        self.writer.update_changelog(task.day_number, task.title, last_sha, task.description)
+        _do_commit(f"chore(changelog): [Day {task.day_number:02d}] record changelog release notes for {task.title}", ["CHANGELOG.md"])
+
+        # 5. Progress tracker & streak metrics
+        self.writer.write_progress_md(all_tasks, self.state_manager.get_progress_summary())
+        _do_commit(f"chore(tracker): [Day {task.day_number:02d}] update milestone progress and streak metrics", ["PROGRESS.md"])
+
+        # Stage any remaining modified or untracked workspace files
+        status = self.git.get_status()
+        remaining = [f for f in (status.modified_files + status.untracked_files) if not f.startswith("state/")]
+        if remaining:
+            _do_commit(f"chore(sync): [Day {task.day_number:02d}] synchronize workspace artifacts", remaining)
+
+        # Guarantee at least 3 to 5 commits if milestone had few files
+        while len(commit_shas) < 3:
+            self.writer.write_progress_md(all_tasks, self.state_manager.get_progress_summary())
+            c_sha = _do_commit(f"chore(checkpoint): [Day {task.day_number:02d}] verify automated execution checkpoint ({len(commit_shas) + 1})", ["PROGRESS.md"])
+            if not c_sha:
+                break
+
+        final_sha = commit_shas[-1] if commit_shas else None
+        push_verified = False
+        if final_sha and self.config.daily_push_enabled and self.config.repository_url:
+            self.git.push()
+            push_verified = self.git.verify_remote_commit(final_sha)
+
+        logger.info("Milestone Day %d completed with %d granular commit(s) pushed.", task.day_number, len(commit_shas))
+        return final_sha, push_verified, commit_shas
