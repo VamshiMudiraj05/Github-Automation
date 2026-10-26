@@ -34,9 +34,9 @@ repository_url: "https://github.com/VamshiMudiraj05/Text-to-SQL"
 base_branch: "main"
 target_workspace: "workspace/Text-to-SQL"
 
-# Schedule Settings (IST = UTC+5:30 -> 6:00 AM IST is 00:30 UTC)
+# Schedule Settings (IST = UTC+5:30 -> 6:17 AM IST is 00:47 UTC)
 timezone: "Asia/Kolkata"
-daily_run_time: "06:00"
+daily_run_time: "06:17"
 project_start_date: "2026-10-24"
 project_duration_days: 30
 

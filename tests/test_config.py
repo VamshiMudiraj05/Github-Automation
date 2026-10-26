@@ -10,7 +10,7 @@ def test_load_default_config(tmp_path: Path):
     assert config.project_name != ""
     assert config.project_duration_days == 30
     assert config.timezone == "Asia/Kolkata"
-    assert config.daily_run_time == "06:00"
+    assert config.daily_run_time == "06:17"
 
 
 def test_cron_conversion_ist_to_utc():
@@ -21,11 +21,11 @@ def test_cron_conversion_ist_to_utc():
         tech_stack=TechStackConfig(),
         repository_url="https://github.com/test/repo",
         timezone="Asia/Kolkata",
-        daily_run_time="06:00",
+        daily_run_time="06:17",
     )
-    # 06:00 (6:00 AM morning) IST is 00:30 UTC
+    # 06:17 (6:17 AM morning) IST is 00:47 UTC
     cron = config.get_cron_schedule_utc()
-    assert cron == "30 0 * * *"
+    assert cron == "47 0 * * *"
 
 
 def test_cron_conversion_custom_utc():

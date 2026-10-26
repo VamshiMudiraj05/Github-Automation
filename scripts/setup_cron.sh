@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Cron setup script for Linux / macOS always-on workers
-# Configures crontab to run daily at 06:00 IST (6:00 AM morning Asia/Kolkata)
+# Configures crontab to run daily at 06:17 IST (6:17 AM morning Asia/Kolkata)
 
 set -e
 
@@ -12,10 +12,10 @@ echo "Project Directory: $PROJECT_DIR"
 echo "Python Binary: $PYTHON_BIN"
 
 # Check if crontab entry already exists
-CRON_CMD="0 6 * * * cd $PROJECT_DIR && $PYTHON_BIN main.py run >> logs/cron.log 2>&1"
+CRON_CMD="17 6 * * * cd $PROJECT_DIR && $PYTHON_BIN main.py run >> logs/cron.log 2>&1"
 
 (crontab -l 2>/dev/null | grep -v "main.py run" ; echo "$CRON_CMD") | crontab -
 
 echo "✅ Crontab entry registered successfully!"
-echo "Schedule: 0 6 * * * (Daily at 6:00 AM morning local time)"
+echo "Schedule: 17 6 * * * (Daily at 6:17 AM morning local time)"
 crontab -l | grep "main.py run"

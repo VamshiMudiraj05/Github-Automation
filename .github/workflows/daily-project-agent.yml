@@ -1,9 +1,9 @@
-name: "Autonomous 30-Day Project Agent (Daily 6:00 AM IST)"
+name: "Autonomous 30-Day Project Agent (Daily 6:17 AM IST)"
 
 on:
   schedule:
-    # 6:00 AM IST (Asia/Kolkata, UTC+5:30) = 00:30 UTC every single day
-    - cron: '30 0 * * *'
+    # 6:17 AM IST (Asia/Kolkata, UTC+5:30) = 00:47 UTC every single day
+    - cron: '47 0 * * *'
   workflow_dispatch:
     inputs:
       day_override:
