@@ -92,3 +92,61 @@ def test_e2e_resume_interrupted_run(tmp_path: Path):
 
     t2 = runner.state_manager.get_task_by_day(2)
     assert t2.status == TaskStatus.COMPLETED
+
+
+def test_e2e_all_milestones_completed(tmp_path: Path):
+    config = load_config(Path("project.config.yaml"))
+    config.workspace_root = tmp_path
+    config.daily_push_enabled = False
+
+    subprocess.run(["git", "init", "-b", "main"], cwd=str(tmp_path), check=True)
+    subprocess.run(["git", "config", "user.name", "CI Runner"], cwd=str(tmp_path), check=True)
+    subprocess.run(["git", "config", "user.email", "ci@example.com"], cwd=str(tmp_path), check=True)
+
+    runner = DailyExecutionRunner(config)
+    runner.provider = MockLLMProvider()
+
+    from src.planner.generator import RoadmapGenerator
+    planner = RoadmapGenerator(config, runner.state_manager, runner.provider)
+    planner.generate_and_save()
+
+    # Mark all tasks as completed
+    for task in runner.state_manager.get_all_tasks():
+        runner.state_manager.mark_task_completed(task.day_number, commit_sha=f"sha_{task.day_number}")
+
+    # Running daily cycle when all are completed should return COMPLETED status
+    run_completed = runner.run_daily_cycle()
+    assert run_completed.status == "COMPLETED"
+    assert run_completed.day_number == len(runner.state_manager.get_all_tasks())
+
+
+def test_cli_run_handles_completed_status(monkeypatch, tmp_path: Path):
+    from click.testing import CliRunner
+    from src.cli import cli
+    from src.state.manager import ExecutionRun
+
+    # Mock runner.run_daily_cycle to return COMPLETED status
+    mock_run = ExecutionRun(
+        run_id="test_run",
+        day_number=30,
+        scheduled_time="06:17",
+        start_time="2026-11-21T00:00:00Z",
+        duration_seconds=1.5,
+        status="COMPLETED",
+        tests_passed=True,
+        push_verified=True,
+    )
+
+    class DummyRunner:
+        def __init__(self, config):
+            pass
+        def run_daily_cycle(self, target_day=None, dry_run=False, force=False):
+            return mock_run
+
+    monkeypatch.setattr("src.cli.DailyExecutionRunner", DummyRunner)
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["run"])
+    assert result.exit_code == 0
+    assert "All milestones are completed!" in result.output
+

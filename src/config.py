@@ -26,7 +26,7 @@ class TechStackConfig:
 @dataclass
 class LLMConfig:
     provider: str = "gemini"  # gemini | openai | anthropic | mock
-    model: str = "gemini-2.5-flash"
+    model: str = "gemini-3.5-flash"
     temperature: float = 0.2
     max_output_tokens: int = 4096
     api_key: Optional[str] = None

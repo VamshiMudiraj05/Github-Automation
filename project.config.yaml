@@ -38,7 +38,7 @@ target_workspace: "workspace/Text-to-SQL"
 timezone: "Asia/Kolkata"
 daily_run_time: "06:17"
 project_start_date: "2026-10-24"
-project_duration_days: 30
+project_duration_days: 90
 
 # Automation Gates and Rules
 daily_commit_enabled: true
@@ -51,7 +51,7 @@ daily_execution_timeout_minutes: 25
 # Model Provider Settings (API keys read via ENV variables)
 llm:
   provider: "gemini"               # Options: gemini | openai | anthropic | mock
-  model: "gemini-2.5-flash"        # Recommended Google Gemini model
+  model: "gemini-3.5-flash"        # Recommended Google Gemini model
   temperature: 0.2
   max_output_tokens: 4096
 

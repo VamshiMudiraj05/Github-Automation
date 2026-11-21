@@ -72,11 +72,12 @@ class DailyExecutionRunner:
                 task = self.state_manager.get_next_incomplete_task()
 
             if not task:
-                logger.info("All 30 milestones are already completed! Nothing to run.")
                 summary = self.state_manager.get_progress_summary()
+                total = summary.get("total_tasks", self.config.project_duration_days)
+                logger.info("All %d milestones are already completed! Nothing to run.", total)
                 return ExecutionRun(
                     run_id=run_id,
-                    day_number=30,
+                    day_number=total,
                     scheduled_time=self.config.daily_run_time,
                     start_time=start_time_iso,
                     end_time=datetime.now(timezone.utc).isoformat(),
@@ -251,7 +252,7 @@ class DailyExecutionRunner:
         roadmap_targets = ["ROADMAP.md"]
         if doc_files:
             roadmap_targets.extend(doc_files)
-        _do_commit(f"docs(roadmap): [Day {task.day_number:02d}] update 30-day technical roadmap", roadmap_targets)
+        _do_commit(f"docs(roadmap): [Day {task.day_number:02d}] update technical roadmap", roadmap_targets)
 
         # 4. Changelog release notes
         last_sha = commit_shas[-1] if commit_shas else "milestone"

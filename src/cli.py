@@ -162,12 +162,12 @@ def cmd_init():
 @cli.command("plan")
 @click.option("--force", is_flag=True, help="Force regenerate roadmap even if one exists.")
 def cmd_plan(force: bool):
-    """Generate and view the 30-day technical roadmap."""
+    """Generate and view the technical roadmap."""
     config = load_config()
-    state_mgr = StateManager(config.workspace_root / "state" / "agent_state.db")
+    state_mgr = StateManager(config.workspace_root / "state" / f"{config.project_id}_state.db")
     generator = RoadmapGenerator(config, state_mgr)
 
-    click.secho(f"\n🗺️ Generating 30-Day Technical Roadmap for: {config.project_name}...", fg="cyan")
+    click.secho(f"\n🗺️ Generating Technical Roadmap for: {config.project_name}...", fg="cyan")
     tasks = generator.generate_and_save(force=force)
 
     click.secho(f"✅ Generated {len(tasks)} daily milestones successfully!", fg="green", bold=True)
@@ -175,7 +175,7 @@ def cmd_plan(force: bool):
 
 
 @cli.command("run")
-@click.option("--day", type=int, default=None, help="Target specific day number (1-30). Default is next pending day.")
+@click.option("--day", type=int, default=None, help="Target specific day number. Default is next pending day.")
 @click.option("--dry-run", is_flag=True, help="Execute coding and testing without committing or pushing.")
 @click.option("--force", is_flag=True, help="Force run task even if already marked completed.")
 def cmd_run(day: Optional[int], dry_run: bool, force: bool):
@@ -193,6 +193,9 @@ def cmd_run(day: Optional[int], dry_run: bool, force: bool):
             click.echo(f"   Duration: {run_record.duration_seconds}s")
         elif run_record.status == "SKIPPED":
             click.secho(f"⏭️ Day {run_record.day_number} was skipped (already completed).", fg="yellow")
+        elif run_record.status == "COMPLETED":
+            click.secho(f"🏁 All milestones are completed! Project is complete (Day {run_record.day_number}).", fg="green", bold=True)
+            click.echo(f"   Duration: {run_record.duration_seconds}s")
         else:
             click.secho(f"❌ Day {run_record.day_number} failed with status: {run_record.status}", fg="red", bold=True)
             click.echo(f"   Error: {run_record.error_details}")
@@ -206,12 +209,12 @@ def cmd_run(day: Optional[int], dry_run: bool, force: bool):
 def cmd_status():
     """Display overall progress, streak, and milestone activity."""
     config = load_config()
-    state_mgr = StateManager(config.workspace_root / "state" / "agent_state.db")
+    state_mgr = StateManager(config.workspace_root / "state" / f"{config.project_id}_state.db")
     summary = state_mgr.get_progress_summary()
     tasks = state_mgr.get_all_tasks()
 
     click.secho(f"\n📊 Project Progress: {config.project_name}", fg="cyan", bold=True)
-    click.echo(f"Schedule: Daily at {config.daily_run_time} ({config.timezone}) | Target: 30 Days")
+    click.echo(f"Schedule: Daily at {config.daily_run_time} ({config.timezone}) | Target: {config.project_duration_days} Days")
     click.echo(f"Overall Progress: {summary['completed']}/{summary['total_tasks']} Milestones ({summary['completion_percentage']}%)")
     click.echo(f"Current Daily Streak: 🔥 {summary['streak']} Days")
     click.echo(f"Current Active Milestone: Day {summary['current_day']}\n")

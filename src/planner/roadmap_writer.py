@@ -22,8 +22,30 @@ class RoadmapWriter:
         total = len(tasks)
         pct = round((completed / total * 100), 1) if total else 0.0
 
+        # Build dynamic phase summary table
+        phase_map = {}
+        for t in sorted(tasks, key=lambda x: x.day_number):
+            if t.phase not in phase_map:
+                phase_map[t.phase] = {"start": t.day_number, "end": t.day_number, "tasks": []}
+            phase_map[t.phase]["end"] = t.day_number
+            phase_map[t.phase]["tasks"].append(t)
+
+        phase_rows = []
+        for phase_name, pdata in phase_map.items():
+            ptasks = pdata["tasks"]
+            if all(pt.status == TaskStatus.COMPLETED for pt in ptasks):
+                pstatus = "Completed"
+            elif any(pt.status in (TaskStatus.COMPLETED, TaskStatus.IN_PROGRESS) for pt in ptasks):
+                pstatus = "In Progress"
+            else:
+                pstatus = "Planned"
+            
+            # Derive focus area from first task description or title
+            focus = ptasks[0].title if ptasks else phase_name
+            phase_rows.append(f"| **{phase_name}** | Days {pdata['start']}–{pdata['end']} | {focus[:55]} | {pstatus} |")
+
         lines = [
-            f"# 🗺️ 30-Day Engineering Roadmap: {self.config.project_name}",
+            f"# 🗺️ {total}-Day Engineering Roadmap: {self.config.project_name}",
             "",
             f"> **Project Objective:** {self.config.project_description}",
             f"> **Start Date:** {self.config.project_start_date} | **Schedule:** Daily at {self.config.daily_run_time} ({self.config.timezone})",
@@ -33,15 +55,11 @@ class RoadmapWriter:
             "",
             "| Phase | Days | Focus Area | Status |",
             "| :--- | :--- | :--- | :--- |",
-            "| **Phase 1: Foundation** | Days 1–5 | Architecture, Models, Persistence, CI Setup | In Progress |",
-            "| **Phase 2: Core Functionality** | Days 6–12 | End-to-End Ingestion, Aggregation, Processing | Planned |",
-            "| **Phase 3: Advanced Features** | Days 13–19 | Alerts, Query Engine, Anomaly Detection, Exporters | Planned |",
-            "| **Phase 4: Reliability & Polish** | Days 20–25 | Benchmarks, Concurrency, Hardening, 90%+ Test Coverage | Planned |",
-            "| **Phase 5: Release & Deployment** | Days 26–30 | Packaging, Docker, Production Verification, Final Docs | Planned |",
+            *phase_rows,
             "",
             "---",
             "",
-            "## 🗓️ Detailed 30-Day Milestone Breakdown",
+            f"## 🗓️ Detailed {total}-Day Milestone Breakdown",
             "",
         ]
 

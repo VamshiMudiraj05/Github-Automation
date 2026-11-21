@@ -16,7 +16,7 @@ class GeminiProvider(LLMProvider):
 
     BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 
-    def __init__(self, api_key: Optional[str], model: str = "gemini-2.5-flash", timeout: int = 60):
+    def __init__(self, api_key: Optional[str], model: str = "gemini-3.5-flash", timeout: int = 60):
         self.api_key = api_key
         self.model = model
         self.timeout = timeout
@@ -78,13 +78,13 @@ class GeminiProvider(LLMProvider):
                         raw_response=data,
                     )
                 elif response.status_code in (429, 503):
-                    # Tiered fallback progression: primary -> flash-lite -> gemini-1.5-flash
+                    # Tiered fallback progression: primary -> gemini-3.1-flash-lite -> gemini-flash-lite-latest
                     if attempt == 2 and "lite" not in active_model:
-                        active_model = "gemini-2.5-flash-lite"
+                        active_model = "gemini-3.1-flash-lite"
                         logger.warning("Gemini model busy (%d). Falling back to %s...", response.status_code, active_model)
                         url = f"{self.BASE_URL}/{active_model}:generateContent?key={self.api_key}"
                     elif attempt >= 3:
-                        active_model = "gemini-1.5-flash"
+                        active_model = "gemini-flash-lite-latest"
                         logger.warning("Gemini model busy (%d). Falling back to %s...", response.status_code, active_model)
                         url = f"{self.BASE_URL}/{active_model}:generateContent?key={self.api_key}"
                     else:

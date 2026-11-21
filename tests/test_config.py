@@ -8,7 +8,7 @@ from src.config import load_config, ProjectConfig, TechStackConfig, LLMConfig
 def test_load_default_config(tmp_path: Path):
     config = load_config(Path("project.config.yaml"))
     assert config.project_name != ""
-    assert config.project_duration_days == 30
+    assert config.project_duration_days == 90
     assert config.timezone == "Asia/Kolkata"
     assert config.daily_run_time == "06:17"
 

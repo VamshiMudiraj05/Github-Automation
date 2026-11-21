@@ -16,22 +16,22 @@ def test_roadmap_generates_30_tasks(tmp_path: Path):
     generator = RoadmapGenerator(config, state_mgr, provider=mock_provider)
 
     tasks = generator.generate_and_save(force=True)
-    assert len(tasks) == 30
+    assert len(tasks) == 90
     assert state_mgr.has_roadmap() is True
 
-    # Validate 5 phases
+    # Validate phases
     phases = {t.phase for t in tasks}
     assert "Phase 1: Foundation" in phases
     assert "Phase 2: Core Functionality" in phases
-    assert "Phase 3: Advanced Features" in phases
-    assert "Phase 4: Reliability and Polish" in phases
+    assert "Phase 3: Clarification & State" in phases
     assert "Phase 5: Release" in phases
+    assert "Phase 6: Multi-Dialect Support & Advanced Analytics" in phases
 
     # Validate generated files
     assert (config.target_project_root / "ROADMAP.md").exists()
     assert (config.target_project_root / "PROGRESS.md").exists()
 
     roadmap_text = (config.target_project_root / "ROADMAP.md").read_text(encoding="utf-8")
-    assert "30-Day Engineering Roadmap" in roadmap_text
+    assert "90-Day Engineering Roadmap" in roadmap_text
     assert "Day 01" in roadmap_text
-    assert "Day 30" in roadmap_text
+    assert "Day 90" in roadmap_text
